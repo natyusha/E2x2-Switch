@@ -17,6 +17,7 @@ public class HotkeyService : IDisposable
     public const uint ModControl = 0x0002;
     public const uint ModShift = 0x0004;
     public const uint ModWin = 0x0008;
+    public const uint ModNoRepeat = 0x4000;
 
     private const int WmHotkey = 0x0312;
 
@@ -34,12 +35,15 @@ public class HotkeyService : IDisposable
         _source?.AddHook(HwndHook);
     }
 
-    /// <summary>Registers a global hotkey and returns its unique ID.</summary>
+    /// <summary>Registers a global hotkey with auto-repeat suppression and returns its unique ID.</summary>
     public int Register(uint modifiers, Key key)
     {
+        if (key == Key.None)
+            return 0;
+
         int id = _currentId++;
         uint vk = (uint)KeyInterop.VirtualKeyFromKey(key);
-        RegisterHotKey(_hwnd, id, modifiers, vk);
+        RegisterHotKey(_hwnd, id, modifiers | ModNoRepeat, vk);
         return id;
     }
 

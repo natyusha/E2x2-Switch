@@ -36,21 +36,26 @@ public partial class App : System.Windows.Application
             mainWindow.Show();
         }
 
+        // Listen for launch signals from secondary instances with safe disposal handling
         s_eventThread = new Thread(() =>
         {
-            while (s_instanceEvent.WaitOne())
+            try
             {
-                Dispatcher.BeginInvoke(() =>
+                while (s_instanceEvent != null && s_instanceEvent.WaitOne())
                 {
-                    mainWindow.Show();
-                    if (mainWindow.WindowState == WindowState.Minimized)
+                    Dispatcher.BeginInvoke(() =>
                     {
-                        mainWindow.WindowState = WindowState.Normal;
-                    }
-                    mainWindow.Activate();
-                    mainWindow.Focus();
-                });
+                        mainWindow.Show();
+                        if (mainWindow.WindowState == WindowState.Minimized)
+                        {
+                            mainWindow.WindowState = WindowState.Normal;
+                        }
+                        mainWindow.Activate();
+                        mainWindow.Focus();
+                    });
+                }
             }
+            catch (ObjectDisposedException) { }
         })
         {
             IsBackground = true,
@@ -61,6 +66,7 @@ public partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         s_instanceEvent?.Dispose();
+        s_instanceEvent = null;
         base.OnExit(e);
     }
 

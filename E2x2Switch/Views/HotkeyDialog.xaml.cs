@@ -28,6 +28,26 @@ public partial class HotkeyDialog : FluentWindow
     {
         Key key = e.Key == Key.System ? e.SystemKey : e.Key;
 
+        // Allow standalone Esc to cancel and Enter to save when no modifiers are held
+        if (Keyboard.Modifiers == ModifierKeys.None)
+        {
+            if (key == Key.Escape)
+            {
+                DialogResult = false;
+                Close();
+                e.Handled = true;
+                return;
+            }
+            if (key == Key.Enter)
+            {
+                DialogResult = true;
+                Close();
+                e.Handled = true;
+                return;
+            }
+        }
+
+        // Ignore standalone modifier presses
         if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
         {
             return;

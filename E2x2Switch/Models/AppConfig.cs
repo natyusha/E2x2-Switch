@@ -43,6 +43,9 @@ public class AppConfig
     public HotkeyBinding GainToggle { get; set; } = new(HotkeyService.ModControl | HotkeyService.ModShift, Key.F3);
     public HotkeyBinding BothEnabled { get; set; } = new(HotkeyService.ModControl | HotkeyService.ModShift, Key.F4);
 
+    public AudioOutputMode LastOutputMode { get; set; } = AudioOutputMode.Headphones;
+    public bool LastGainIsHigh { get; set; } = false;
+
     private static readonly string s_configPath = Path.Combine(AppContext.BaseDirectory, "config.json");
 
     /// <summary>Loads configuration from disk or returns defaults.</summary>

@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel;
-using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -12,8 +11,6 @@ using Microsoft.Win32;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 using GdiColor = System.Drawing.Color;
-using GdiPen = System.Drawing.Pen;
-using GdiRectangle = System.Drawing.Rectangle;
 using WpfBrush = System.Windows.Media.Brush;
 using WpfTextBlock = System.Windows.Controls.TextBlock;
 
@@ -34,8 +31,6 @@ public partial class MainWindow : FluentWindow
     private NotifyIcon? _trayIcon;
     private Icon? _currentTrayIcon;
 
-    private AudioOutputMode _currentMode = AudioOutputMode.Headphones;
-
     private int _idHp;
     private int _idSpk;
     private int _idGain;
@@ -44,6 +39,8 @@ public partial class MainWindow : FluentWindow
     public MainWindow()
     {
         InitializeComponent();
+
+        _topping.InitializeState(_config.LastOutputMode, _config.LastGainIsHigh);
 
         var systemAccent = ApplicationAccentColorManager.GetColorizationColor();
         ApplicationThemeManager.Apply(ApplicationTheme.Dark, WindowBackdropType.Mica, updateAccent: true);
@@ -59,6 +56,12 @@ public partial class MainWindow : FluentWindow
 
         StartWithWindowsToggle.IsChecked = StartupService.IsStartWithWindowsEnabled();
 
+        // Hook up hardware monitoring and event sync
+        _topping.GainChanged += OnHardwareGainChanged;
+        _topping.OutputModeChanged += OnHardwareOutputModeChanged;
+        _topping.ConnectionChanged += OnHardwareConnectionChanged;
+        _topping.StartMonitoring();
+
         _heartbeatTimer.Interval = TimeSpan.FromSeconds(2);
         _heartbeatTimer.Tick += (s, e) => UpdateConnectionStatus();
         _heartbeatTimer.Start();
@@ -71,10 +74,34 @@ public partial class MainWindow : FluentWindow
         SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
     }
 
+    private void OnHardwareGainChanged(bool gainIsHigh)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            _config.LastGainIsHigh = gainIsHigh;
+            _config.Save();
+            UpdateTrayState();
+        });
+    }
+
+    private void OnHardwareOutputModeChanged(AudioOutputMode mode)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            _config.LastOutputMode = mode;
+            _config.Save();
+            UpdateTrayState();
+        });
+    }
+
+    private void OnHardwareConnectionChanged(bool isConnected)
+    {
+        Dispatcher.BeginInvoke(UpdateConnectionStatus);
+    }
+
     private void UpdateConnectionStatus()
     {
-        bool isConnected = ToppingService.IsConnected();
-        if (isConnected)
+        if (_topping.IsConnected)
         {
             StatusFooterText.Text = $"● Connected (VID: 0x{ToppingService.Vid:X4}, PID: 0x{ToppingService.Pid:X4})";
             StatusFooterText.Foreground = (WpfBrush)FindResource("SystemFillColorSuccessBrush");
@@ -166,28 +193,34 @@ public partial class MainWindow : FluentWindow
 
     private void SetHeadphonesMode()
     {
-        _currentMode = AudioOutputMode.Headphones;
         _topping.SetHeadphonesOnly();
-        UpdateTrayState();
+        PersistStateAndRefresh();
     }
 
     private void SetSpeakersMode()
     {
-        _currentMode = AudioOutputMode.Speakers;
         _topping.SetSpeakersOnly();
-        UpdateTrayState();
+        PersistStateAndRefresh();
     }
 
     private void SetBothMode()
     {
-        _currentMode = AudioOutputMode.Both;
         _topping.SetBoth();
-        UpdateTrayState();
+        PersistStateAndRefresh();
     }
 
     private void ToggleGainMode()
     {
         _topping.ToggleGain();
+        PersistStateAndRefresh();
+    }
+
+    private void PersistStateAndRefresh()
+    {
+        _config.LastOutputMode = _topping.CurrentMode;
+        _config.LastGainIsHigh = _topping.GainIsHigh;
+        _config.Save();
+
         UpdateTrayState();
     }
 
@@ -197,12 +230,12 @@ public partial class MainWindow : FluentWindow
             return;
 
         Icon? oldIcon = _currentTrayIcon;
-        _currentTrayIcon = TrayIconService.GetTrayIcon(_currentMode, _topping.GainIsHigh);
+        _currentTrayIcon = TrayIconService.GetTrayIcon(_topping.CurrentMode, _topping.GainIsHigh);
         _trayIcon.Icon = _currentTrayIcon;
 
         oldIcon?.Dispose();
 
-        string modeName = _currentMode switch
+        string modeName = _topping.CurrentMode switch
         {
             AudioOutputMode.Headphones => "Headphones",
             AudioOutputMode.Speakers => "Speakers",
@@ -300,7 +333,7 @@ public partial class MainWindow : FluentWindow
                 )
             );
 
-            menu.Opening += (s, e) => UpdateContextMenuTheme();
+            menu.Opened += (s, e) => UpdateContextMenuTheme();
             _trayIcon.ContextMenuStrip = menu;
             UpdateContextMenuTheme();
         }
@@ -344,86 +377,7 @@ public partial class MainWindow : FluentWindow
         _hotkeys.Dispose();
         _trayIcon?.Dispose();
         _currentTrayIcon?.Dispose();
+        _topping.Dispose();
         base.OnClosed(e);
     }
-}
-
-/// <summary>Renders system tray context menus matching Windows Dark and Light themes with Fluent hover states.</summary>
-internal sealed class ThemeAwareContextMenuRenderer(bool isLight) : ToolStripProfessionalRenderer(new ThemeAwareColorTable(isLight))
-{
-    protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
-    {
-        if (!e.Item.Selected)
-        {
-            base.OnRenderMenuItemBackground(e);
-            return;
-        }
-
-        var g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-
-        var bounds = new GdiRectangle(2, 1, e.Item.Width - 4, e.Item.Height - 2);
-        var hoverColor = isLight ? GdiColor.FromArgb(232, 232, 232) : GdiColor.FromArgb(58, 60, 65);
-
-        using var brush = new SolidBrush(hoverColor);
-        using var path = CreateRoundedRectangle(bounds, 4);
-        g.FillPath(brush, path);
-    }
-
-    protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
-    {
-        var bounds = new GdiRectangle(0, 0, e.ToolStrip.Width - 1, e.ToolStrip.Height - 1);
-        var borderColor = isLight ? GdiColor.FromArgb(220, 220, 220) : GdiColor.FromArgb(56, 58, 62);
-
-        using var pen = new GdiPen(borderColor, 1);
-        e.Graphics.DrawRectangle(pen, bounds);
-    }
-
-    protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
-    {
-        int y = e.Item.Height / 2;
-        var sepColor = isLight ? GdiColor.FromArgb(225, 225, 225) : GdiColor.FromArgb(54, 56, 60);
-
-        using var pen = new GdiPen(sepColor, 1);
-        e.Graphics.DrawLine(pen, 4, y, e.Item.Width - 4, y);
-    }
-
-    private static GraphicsPath CreateRoundedRectangle(GdiRectangle rect, int radius)
-    {
-        var path = new GraphicsPath();
-        int diameter = radius * 2;
-        var arc = new GdiRectangle(rect.X, rect.Y, diameter, diameter);
-
-        path.AddArc(arc, 180, 90);
-        arc.X = rect.Right - diameter;
-        path.AddArc(arc, 270, 90);
-        arc.Y = rect.Bottom - diameter;
-        path.AddArc(arc, 0, 90);
-        arc.X = rect.Left;
-        path.AddArc(arc, 90, 90);
-        path.CloseFigure();
-
-        return path;
-    }
-}
-
-internal sealed class ThemeAwareColorTable(bool isLight) : ProfessionalColorTable
-{
-    public override GdiColor ToolStripDropDownBackground => isLight ? GdiColor.FromArgb(249, 249, 249) : GdiColor.FromArgb(43, 43, 43);
-
-    public override GdiColor MenuBorder => isLight ? GdiColor.FromArgb(220, 220, 220) : GdiColor.FromArgb(60, 60, 60);
-
-    public override GdiColor MenuItemBorder => GdiColor.Transparent;
-
-    public override GdiColor MenuItemSelected => isLight ? GdiColor.FromArgb(230, 230, 230) : GdiColor.FromArgb(58, 60, 65);
-
-    public override GdiColor MenuItemSelectedGradientBegin => MenuItemSelected;
-    public override GdiColor MenuItemSelectedGradientEnd => MenuItemSelected;
-    public override GdiColor ImageMarginGradientBegin => ToolStripDropDownBackground;
-    public override GdiColor ImageMarginGradientMiddle => ToolStripDropDownBackground;
-    public override GdiColor ImageMarginGradientEnd => ToolStripDropDownBackground;
-
-    public override GdiColor SeparatorDark => isLight ? GdiColor.FromArgb(225, 225, 225) : GdiColor.FromArgb(60, 60, 60);
-
-    public override GdiColor SeparatorLight => GdiColor.Transparent;
 }
