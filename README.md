@@ -2,6 +2,7 @@
 
 ![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D4?&logo=windows)
 ![.NET Version](https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet)
+[![GitHub Latest](https://img.shields.io/github/v/tag/natyusha/E2x2-Switch?label=Latest&logo=github&logoColor=fff)](https://github.com/natyusha/E2x2-Switch/releases/latest)
 
 A lightweight Windows utility for controlling the [TOPPING E2x2 Audio Interface](https://topping.pro/e2x2/) via global keyboard shortcuts.
 
