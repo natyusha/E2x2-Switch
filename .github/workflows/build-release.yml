@@ -1,0 +1,79 @@
+name: Build & Release E2x2Switch
+run-name: "${{ github.event_name == 'workflow_dispatch' && format('Manual Build: {0}', github.event.inputs.tag_name) || format('{0}', github.event.release.name || github.event.release.tag_name) }}"
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Tag or branch to build from (e.g. v1.0.0 or master)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Build & attach win-x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag_name || github.event.release.tag_name }}
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Set Version Variables
+        id: vars
+        shell: bash
+        run: |
+          TAG="${{ github.event.inputs.tag_name || github.event.release.tag_name }}"
+
+          if [[ "$TAG" =~ ^v[0-9] ]]; then
+            echo "is_tag=true" >> $GITHUB_OUTPUT
+            VERSION="${TAG#v}"
+            VERSION_BASE=$(echo "$VERSION" | cut -d'.' -f1-3)
+            echo "file_ver=v${VERSION_BASE}" >> $GITHUB_OUTPUT
+          else
+            echo "is_tag=false" >> $GITHUB_OUTPUT
+            echo "file_ver=$TAG" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish
+        run: dotnet publish E2x2Switch/E2x2Switch.csproj -c Release -r win-x64 --self-contained -o publish
+        env:
+          DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+      - name: Package ZIP
+        id: pkg_win
+        shell: pwsh
+        run: |
+          $ZipName = "E2x2-Switch-${{ steps.vars.outputs.file_ver }}_win-x64.zip"
+          $StageDir = "$env:GITHUB_WORKSPACE\staging\E2x2-Switch"
+          New-Item -ItemType Directory -Path $StageDir -Force | Out-Null
+          Copy-Item -Path publish\* -Destination $StageDir -Recurse
+          Compress-Archive -Path "$env:GITHUB_WORKSPACE\staging\E2x2-Switch" -DestinationPath "$env:GITHUB_WORKSPACE\$ZipName" -Force
+          echo "zip_path=$ZipName" >> $env:GITHUB_OUTPUT
+
+      - name: Upload asset to GitHub Release
+        if: steps.vars.outputs.is_tag == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag_name || github.event.release.tag_name }}
+          ZIP_PATH: ${{ steps.pkg_win.outputs.zip_path }}
+        run: |
+          gh release upload "$TAG" "$ZIP_PATH" --clobber
+
+      - name: Upload Artifacts
+        if: steps.vars.outputs.is_tag == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: E2x2-Switch-${{ steps.vars.outputs.file_ver }}-win-x64
+          path: ${{ steps.pkg_win.outputs.zip_path }}

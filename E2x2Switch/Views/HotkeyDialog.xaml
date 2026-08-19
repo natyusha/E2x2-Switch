@@ -1,0 +1,75 @@
+<ui:FluentWindow x:Class="E2x2Switch.Views.HotkeyDialog"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="Change Shortcut"
+                 Height="360"
+                 Width="520"
+                 WindowStartupLocation="CenterOwner"
+                 WindowBackdropType="Mica"
+                 ExtendsContentIntoTitleBar="True"
+                 ResizeMode="NoResize"
+                 ShowInTaskbar="False">
+
+    <Grid Margin="24,12,24,20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="1"
+                Margin="0,6,0,0">
+            <ui:TextBlock x:Name="TitleText"
+                          Text="Shortcut Title"
+                          FontTypography="Title"/>
+            <ui:TextBlock Text="Press a combination of keys to change this shortcut"
+                          FontTypography="Body"
+                          Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                          Margin="0,2,0,0"/>
+        </StackPanel>
+
+        <!-- Center: Key Badges Container -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                CornerRadius="8"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                Margin="0,16,0,16">
+            <StackPanel x:Name="KeyBadgesPanel"
+                        Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"/>
+        </Border>
+
+        <!-- Hint Text -->
+        <ui:TextBlock Grid.Row="3"
+                      Text="A shortcut should start with Windows key, Ctrl, Alt or Shift."
+                      FontTypography="Caption"
+                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                      Margin="0,0,0,16"/>
+
+        <!-- Bottom Buttons -->
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <ui:Button x:Name="SaveButton"
+                       Content="Save"
+                       Appearance="Primary"
+                       HorizontalAlignment="Stretch"
+                       Margin="0,0,6,0"
+                       Click="Save_Click"/>
+            <ui:Button Content="Cancel"
+                       Grid.Column="1"
+                       Appearance="Secondary"
+                       HorizontalAlignment="Stretch"
+                       Margin="6,0,0,0"
+                       Click="Cancel_Click"/>
+        </Grid>
+    </Grid>
+</ui:FluentWindow>
