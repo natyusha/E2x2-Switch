@@ -5,6 +5,17 @@ using E2x2Switch.Services;
 
 namespace E2x2Switch.Models;
 
+/// <summary>Configurable startup state application behavior.</summary>
+public enum StartupBehavior
+{
+    RestoreLastState,
+    HeadphonesLowGain,
+    HeadphonesHighGain,
+    SpeakersOnly,
+    BothOutputs,
+    None,
+}
+
 /// <summary>Represents a single modifier + key shortcut binding.</summary>
 public class HotkeyBinding
 {
@@ -45,6 +56,7 @@ public class AppConfig
 
     public AudioOutputMode LastOutputMode { get; set; } = AudioOutputMode.Headphones;
     public bool LastGainIsHigh { get; set; } = false;
+    public StartupBehavior StartupState { get; set; } = StartupBehavior.RestoreLastState;
 
     private static readonly string s_configPath = Path.Combine(AppContext.BaseDirectory, "config.json");
 

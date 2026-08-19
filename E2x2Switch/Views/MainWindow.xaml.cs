@@ -12,6 +12,7 @@ using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 using GdiColor = System.Drawing.Color;
 using WpfBrush = System.Windows.Media.Brush;
+using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 using WpfTextBlock = System.Windows.Controls.TextBlock;
 
 namespace E2x2Switch.Views;
@@ -40,8 +41,6 @@ public partial class MainWindow : FluentWindow
     {
         InitializeComponent();
 
-        _topping.InitializeState(_config.LastOutputMode, _config.LastGainIsHigh);
-
         var systemAccent = ApplicationAccentColorManager.GetColorizationColor();
         ApplicationThemeManager.Apply(ApplicationTheme.Dark, WindowBackdropType.Mica, updateAccent: true);
         ApplicationAccentColorManager.Apply(systemAccent, ApplicationTheme.Dark);
@@ -55,12 +54,14 @@ public partial class MainWindow : FluentWindow
         UpdateAllPills();
 
         StartWithWindowsToggle.IsChecked = StartupService.IsStartWithWindowsEnabled();
+        SelectStartupBehaviorItem(_config.StartupState);
 
-        // Hook up hardware monitoring and event sync
         _topping.GainChanged += OnHardwareGainChanged;
         _topping.OutputModeChanged += OnHardwareOutputModeChanged;
         _topping.ConnectionChanged += OnHardwareConnectionChanged;
         _topping.StartMonitoring();
+
+        ApplyInitialStartupState();
 
         _heartbeatTimer.Interval = TimeSpan.FromSeconds(2);
         _heartbeatTimer.Tick += (s, e) => UpdateConnectionStatus();
@@ -72,6 +73,77 @@ public partial class MainWindow : FluentWindow
         UpdateTrayState();
 
         SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
+    }
+
+    protected override void OnPreviewKeyDown(WpfKeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            if (StartupBehaviorComboBox.IsDropDownOpen)
+            {
+                StartupBehaviorComboBox.IsDropDownOpen = false;
+                e.Handled = true;
+                return;
+            }
+
+            // Clear keyboard focus from any control to remove the focus highlight
+            Keyboard.ClearFocus();
+            Focus();
+            e.Handled = true;
+            return;
+        }
+
+        base.OnPreviewKeyDown(e);
+    }
+
+    private void ApplyInitialStartupState()
+    {
+        switch (_config.StartupState)
+        {
+            case StartupBehavior.RestoreLastState:
+                _topping.ApplyState(_config.LastOutputMode, _config.LastGainIsHigh);
+                break;
+            case StartupBehavior.HeadphonesLowGain:
+                _topping.ApplyState(AudioOutputMode.Headphones, false);
+                break;
+            case StartupBehavior.HeadphonesHighGain:
+                _topping.ApplyState(AudioOutputMode.Headphones, true);
+                break;
+            case StartupBehavior.SpeakersOnly:
+                _topping.ApplyState(AudioOutputMode.Speakers, false);
+                break;
+            case StartupBehavior.BothOutputs:
+                _topping.ApplyState(AudioOutputMode.Both, false);
+                break;
+            case StartupBehavior.None:
+            default:
+                _topping.InitializeState(_config.LastOutputMode, _config.LastGainIsHigh);
+                break;
+        }
+
+        PersistStateAndRefresh();
+    }
+
+    private void SelectStartupBehaviorItem(StartupBehavior behavior)
+    {
+        string tag = behavior.ToString();
+        foreach (ComboBoxItem item in StartupBehaviorComboBox.Items)
+        {
+            if (item.Tag?.ToString() == tag)
+            {
+                StartupBehaviorComboBox.SelectedItem = item;
+                break;
+            }
+        }
+    }
+
+    private void StartupBehaviorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (StartupBehaviorComboBox.SelectedItem is ComboBoxItem item && Enum.TryParse<StartupBehavior>(item.Tag?.ToString(), out var behavior))
+        {
+            _config.StartupState = behavior;
+            _config.Save();
+        }
     }
 
     private void OnHardwareGainChanged(bool gainIsHigh)

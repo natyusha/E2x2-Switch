@@ -44,7 +44,7 @@ public class ToppingService : IDisposable
         _readThread.Start();
     }
 
-    /// <summary>Initializes software tracking state.</summary>
+    /// <summary>Initializes software tracking state without transmitting packets.</summary>
     public void InitializeState(AudioOutputMode mode, bool gainIsHigh)
     {
         CurrentMode = mode;
@@ -52,6 +52,21 @@ public class ToppingService : IDisposable
 
         _lastHpState = mode is AudioOutputMode.Headphones or AudioOutputMode.Both;
         _lastSpkState = mode is AudioOutputMode.Speakers or AudioOutputMode.Both;
+    }
+
+    /// <summary>Applies the specified output routing and gain state directly to the hardware.</summary>
+    public void ApplyState(AudioOutputMode mode, bool gainIsHigh)
+    {
+        CurrentMode = mode;
+        GainIsHigh = gainIsHigh;
+        _lastHpState = mode is AudioOutputMode.Headphones or AudioOutputMode.Both;
+        _lastSpkState = mode is AudioOutputMode.Speakers or AudioOutputMode.Both;
+
+        byte[] hpPacket = _lastHpState.Value ? s_cmdHpOn : s_cmdHpMute;
+        byte[] spkPacket = _lastSpkState.Value ? s_cmdSpkOn : s_cmdSpkMute;
+        byte[] gainPacket = gainIsHigh ? s_cmdGainHigh : s_cmdGainLow;
+
+        SendPackets(hpPacket, spkPacket, gainPacket, s_cmdRoute1, s_cmdRoute2);
     }
 
     private void ReadLoop()

@@ -3,13 +3,15 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="E2x2 Switch"
-                Height="480"
+                Height="530"
                 Width="680"
-                 MinHeight="320"
+                 MinHeight="360"
                 MinWidth="520"
                  WindowStartupLocation="CenterScreen"
                  WindowBackdropType="Mica"
-                 ExtendsContentIntoTitleBar="True">
+                 ExtendsContentIntoTitleBar="True"
+                 Focusable="False"
+                 FocusVisualStyle="{x:Null}">
 
         <ui:FluentWindow.Resources>
                 <!-- Fluent Hotkey Button Plate -->
@@ -60,7 +62,8 @@
                 </Style>
         </ui:FluentWindow.Resources>
 
-        <Grid>
+        <Grid Focusable="False"
+                        FocusVisualStyle="{x:Null}">
                 <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
@@ -79,17 +82,20 @@
 
                 <!-- 2. Scrollable Body Content -->
                 <ScrollViewer Grid.Row="1"
+                              Focusable="False"
+                              FocusVisualStyle="{x:Null}"
                               VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled"
                               Padding="24,6,24,10">
-                        <StackPanel>
+                        <StackPanel Focusable="False">
                                 <!-- Section 1: Output Selection -->
                                 <StackPanel Margin="0,4,0,12">
                                         <ui:TextBlock Text="Output Selection"
                                                         FontTypography="Title"/>
                                         <ui:TextBlock Text="Global shortcuts for TOPPING E2x2 audio routing"
                                                       FontTypography="Body"
-                                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                      TextWrapping="Wrap"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                 </StackPanel>
 
                                 <!-- Cards List -->
@@ -111,12 +117,14 @@
                                                                         Margin="0,0,16,0"/>
 
                                                         <StackPanel Grid.Column="1"
-                                                                        VerticalAlignment="Center">
+                                                                        VerticalAlignment="Center"
+                                                                        Margin="0,0,16,0">
                                                                 <ui:TextBlock Text="Headphones only shortcut"
                                                                                 FontTypography="BodyStrong"/>
                                                                 <ui:TextBlock Text="Mutes speakers and enables headphone output"
-                                                                                FontTypography="Caption"
-                                                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                                              FontTypography="Caption"
+                                                                              TextWrapping="Wrap"
+                                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                                         </StackPanel>
 
                                                         <Button Grid.Column="2"
@@ -146,12 +154,14 @@
                                                                         Margin="0,0,16,0"/>
 
                                                         <StackPanel Grid.Column="1"
-                                                                        VerticalAlignment="Center">
+                                                                        VerticalAlignment="Center"
+                                                                        Margin="0,0,16,0">
                                                                 <ui:TextBlock Text="Speakers only shortcut"
                                                                                 FontTypography="BodyStrong"/>
                                                                 <ui:TextBlock Text="Mutes headphones and routes audio to line out"
-                                                                                FontTypography="Caption"
-                                                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                                              FontTypography="Caption"
+                                                                              TextWrapping="Wrap"
+                                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                                         </StackPanel>
 
                                                         <Button Grid.Column="2"
@@ -181,12 +191,14 @@
                                                                         Margin="0,0,16,0"/>
 
                                                         <StackPanel Grid.Column="1"
-                                                                        VerticalAlignment="Center">
+                                                                        VerticalAlignment="Center"
+                                                                        Margin="0,0,16,0">
                                                                 <ui:TextBlock Text="Gain toggle shortcut"
                                                                                 FontTypography="BodyStrong"/>
                                                                 <ui:TextBlock Text="Toggles amplifier between 0dBu and +17dBu"
-                                                                                FontTypography="Caption"
-                                                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                                              FontTypography="Caption"
+                                                                              TextWrapping="Wrap"
+                                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                                         </StackPanel>
 
                                                         <Button Grid.Column="2"
@@ -216,12 +228,14 @@
                                                                         Margin="0,0,16,0"/>
 
                                                         <StackPanel Grid.Column="1"
-                                                                        VerticalAlignment="Center">
+                                                                        VerticalAlignment="Center"
+                                                                        Margin="0,0,16,0">
                                                                 <ui:TextBlock Text="Both outputs shortcut"
                                                                                 FontTypography="BodyStrong"/>
                                                                 <ui:TextBlock Text="Headphones and Speakers enabled simultaneously"
-                                                                                FontTypography="Caption"
-                                                                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                                              FontTypography="Caption"
+                                                                              TextWrapping="Wrap"
+                                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                                         </StackPanel>
 
                                                         <Button Grid.Column="2"
@@ -241,8 +255,55 @@
                                                         FontTypography="Title"/>
                                         <ui:TextBlock Text="Application startup preferences"
                                                       FontTypography="Body"
-                                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                      TextWrapping="Wrap"
+                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                 </StackPanel>
+
+                                <!-- Startup State Card -->
+                                <ui:Card Margin="0,0,0,6"
+                                                Padding="14,10">
+                                        <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <ui:SymbolIcon Symbol="ArrowSync24"
+                                                                FontSize="20"
+                                                                Margin="0,0,16,0"/>
+
+                                                <StackPanel Grid.Column="1"
+                                                                VerticalAlignment="Center"
+                                                                Margin="0,0,16,0">
+                                                        <ui:TextBlock Text="Startup state"
+                                                                        FontTypography="BodyStrong"/>
+                                                        <ui:TextBlock Text="Audio routing and gain state to apply when launching"
+                                                                      FontTypography="Caption"
+                                                                      TextWrapping="Wrap"
+                                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                </StackPanel>
+
+                                                <ComboBox Grid.Column="2"
+                                                                x:Name="StartupBehaviorComboBox"
+                                                          MinWidth="200"
+                                                                VerticalAlignment="Center"
+                                                          SelectionChanged="StartupBehaviorComboBox_SelectionChanged">
+                                                        <ComboBoxItem Content="Restore last active state"
+                                                                        Tag="RestoreLastState"/>
+                                                        <ComboBoxItem Content="Headphones Only (Low Gain)"
+                                                                        Tag="HeadphonesLowGain"/>
+                                                        <ComboBoxItem Content="Headphones Only (High Gain)"
+                                                                        Tag="HeadphonesHighGain"/>
+                                                        <ComboBoxItem Content="Speakers Only"
+                                                                        Tag="SpeakersOnly"/>
+                                                        <ComboBoxItem Content="Both Outputs"
+                                                                        Tag="BothOutputs"/>
+                                                        <ComboBoxItem Content="None (Keep hardware state)"
+                                                                        Tag="None"/>
+                                                </ComboBox>
+                                        </Grid>
+                                </ui:Card>
 
                                 <!-- Start with Windows Card -->
                                 <ui:Card Margin="0,0,0,6"
@@ -259,12 +320,14 @@
                                                                 Margin="0,0,16,0"/>
 
                                                 <StackPanel Grid.Column="1"
-                                                                VerticalAlignment="Center">
+                                                                VerticalAlignment="Center"
+                                                                Margin="0,0,16,0">
                                                         <ui:TextBlock Text="Start with Windows"
                                                                         FontTypography="BodyStrong"/>
                                                         <ui:TextBlock Text="Automatically launch E2x2 Switch in the system tray on startup"
-                                                                        FontTypography="Caption"
-                                                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                                                                      FontTypography="Caption"
+                                                                      TextWrapping="Wrap"
+                                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
                                                 </StackPanel>
 
                                                 <ui:ToggleSwitch Grid.Column="2"
