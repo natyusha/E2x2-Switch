@@ -61,7 +61,8 @@ public partial class MainWindow : FluentWindow
         _topping.ConnectionChanged += OnHardwareConnectionChanged;
         _topping.StartMonitoring();
 
-        ApplyInitialStartupState();
+        // Apply startup state to hardware in background to prevent UI launch blocking
+        Task.Run(ApplyInitialStartupState);
 
         _heartbeatTimer.Interval = TimeSpan.FromSeconds(2);
         _heartbeatTimer.Tick += (s, e) => UpdateConnectionStatus();

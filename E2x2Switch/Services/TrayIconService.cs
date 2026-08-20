@@ -38,7 +38,8 @@ public static class TrayIconService
         {
             (AudioOutputMode.Headphones, true) => $"hp_gain_{themeSuffix}.ico",
             (AudioOutputMode.Headphones, false) => $"hp_{themeSuffix}.ico",
-            (AudioOutputMode.Speakers, _) => $"spk_{themeSuffix}.ico",
+            (AudioOutputMode.Speakers, true) => $"spk_gain_{themeSuffix}.ico",
+            (AudioOutputMode.Speakers, false) => $"spk_{themeSuffix}.ico",
             (AudioOutputMode.Both, true) => $"both_gain_{themeSuffix}.ico",
             (AudioOutputMode.Both, false) => $"both_{themeSuffix}.ico",
             _ => $"app_{themeSuffix}.ico",
