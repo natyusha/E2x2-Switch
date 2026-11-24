@@ -1,27 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
 
     <!-- Application Metadata & Embedded Binary Icon -->
-    <Title>E2x2 Switch</Title>
-    <Authors>natyusha</Authors>
     <AssemblyName>E2x2-Switch</AssemblyName>
     <ApplicationIcon>Assets\app_light.ico</ApplicationIcon>
-    <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
-
-    <!-- Dynamic Version Extraction from Constants File -->
-    <VersionRegex>Version\s*=\s*"([^"]+)"</VersionRegex>
-    <E2x2SwitchConstantsFile>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/E2x2SwitchConstants.cs'))</E2x2SwitchConstantsFile>
-    <Version>$([System.Text.RegularExpressions.Regex]::Match($(E2x2SwitchConstantsFile), $(VersionRegex)).Groups[1].Value)</Version>
-
-    <AssemblyVersion>$(Version).0</AssemblyVersion>
-    <FileVersion>$(Version).0</FileVersion>
-    <InformationalVersion>$(Version)</InformationalVersion>
 
     <!-- Single-File Output Settings -->
     <PublishSingleFile>true</PublishSingleFile>
@@ -30,9 +15,11 @@
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
 
-    <!-- Suppress .pdb and debug symbols -->
+    <!-- Suppress .pdb and .xml doc files in published output -->
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
+    <PublishDocumentationFile>false</PublishDocumentationFile>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
   </PropertyGroup>
 
   <ItemGroup>

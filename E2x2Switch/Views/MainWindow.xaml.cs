@@ -4,14 +4,15 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
-using System.Windows.Threading;
 using E2x2Switch.Models;
 using E2x2Switch.Services;
 using Microsoft.Win32;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 using GdiColor = System.Drawing.Color;
+using WpfApplication = System.Windows.Application;
 using WpfBrush = System.Windows.Media.Brush;
+using WpfColor = System.Windows.Media.Color;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 using WpfTextBlock = System.Windows.Controls.TextBlock;
 
@@ -20,34 +21,46 @@ namespace E2x2Switch.Views;
 /// <summary>Main window view and interaction logic.</summary>
 public partial class MainWindow : FluentWindow
 {
+    #region Win32 Interop
+
     [DllImport("dwmapi.dll")]
-    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+    private static extern int DwmSetWindowAttribute(IntPtr windowHandle, int attribute, ref int attributeValue, int attributeSize);
+
+    #endregion
+
+    #region Constants & Fields
 
     private const int DwmwaUseImmersiveDarkMode = 20;
 
     private readonly ToppingService _topping = new();
     private readonly HotkeyService _hotkeys = new();
     private readonly AppConfig _config = AppConfig.Load();
-    private readonly DispatcherTimer _heartbeatTimer = new();
     private NotifyIcon? _trayIcon;
     private Icon? _currentTrayIcon;
 
-    private int _idHp;
-    private int _idSpk;
-    private int _idGain;
-    private int _idBoth;
+    private int _headphonesHotkeyId;
+    private int _speakersHotkeyId;
+    private int _gainHotkeyId;
+    private int _bothHotkeyId;
+    private bool _allowClose;
+    private bool _startupStateApplied;
 
+    #endregion
+
+    #region Constructor
+
+    /// <summary>Initializes the main window, applies Windows theme resources, registers hotkeys, and starts device monitoring.</summary>
     public MainWindow()
     {
         InitializeComponent();
 
-        var systemAccent = ApplicationAccentColorManager.GetColorizationColor();
+        WpfColor systemAccent = ApplicationAccentColorManager.GetColorizationColor();
         ApplicationThemeManager.Apply(ApplicationTheme.Dark, WindowBackdropType.Mica, updateAccent: true);
         ApplicationAccentColorManager.Apply(systemAccent, ApplicationTheme.Dark);
         SystemThemeWatcher.Watch(this);
 
-        IntPtr hwnd = new WindowInteropHelper(this).EnsureHandle();
-        _hotkeys.Initialize(hwnd);
+        IntPtr windowHandle = new WindowInteropHelper(this).EnsureHandle();
+        _hotkeys.Initialize(windowHandle);
         _hotkeys.HotkeyPressed += OnHotkeyPressed;
 
         RegisterHotkeys();
@@ -55,174 +68,157 @@ public partial class MainWindow : FluentWindow
 
         StartWithWindowsToggle.IsChecked = StartupService.IsStartWithWindowsEnabled();
         SelectStartupBehaviorItem(_config.StartupState);
+        StartupBehaviorComboBox.SelectionChanged += StartupBehaviorComboBox_SelectionChanged;
 
+        _topping.InitializeState(_config.LastOutputMode, _config.LastGainIsHigh);
         _topping.GainChanged += OnHardwareGainChanged;
         _topping.OutputModeChanged += OnHardwareOutputModeChanged;
         _topping.ConnectionChanged += OnHardwareConnectionChanged;
         _topping.StartMonitoring();
 
-        // Apply startup state to hardware in background to prevent UI launch blocking
-        Task.Run(ApplyInitialStartupState);
-
-        _heartbeatTimer.Interval = TimeSpan.FromSeconds(2);
-        _heartbeatTimer.Tick += (s, e) => UpdateConnectionStatus();
-        _heartbeatTimer.Start();
-        UpdateConnectionStatus();
-
         Closing += MainWindow_Closing;
         SetupTray();
         UpdateTrayState();
+        UpdateConnectionStatus();
 
         SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
     }
 
-    protected override void OnPreviewKeyDown(WpfKeyEventArgs e)
-    {
-        if (e.Key == Key.Escape)
-        {
-            if (StartupBehaviorComboBox.IsDropDownOpen)
-            {
-                StartupBehaviorComboBox.IsDropDownOpen = false;
-                e.Handled = true;
-                return;
-            }
+    #endregion
 
-            // Clear keyboard focus from any control to remove the focus highlight
-            Keyboard.ClearFocus();
-            Focus();
-            e.Handled = true;
-            return;
-        }
-
-        base.OnPreviewKeyDown(e);
-    }
+    #region Init & Hardware Sync
 
     private void ApplyInitialStartupState()
     {
-        switch (_config.StartupState)
-        {
-            case StartupBehavior.RestoreLastState:
-                _topping.ApplyState(_config.LastOutputMode, _config.LastGainIsHigh);
-                break;
-            case StartupBehavior.HeadphonesLowGain:
-                _topping.ApplyState(AudioOutputMode.Headphones, false);
-                break;
-            case StartupBehavior.HeadphonesHighGain:
-                _topping.ApplyState(AudioOutputMode.Headphones, true);
-                break;
-            case StartupBehavior.SpeakersOnly:
-                _topping.ApplyState(AudioOutputMode.Speakers, false);
-                break;
-            case StartupBehavior.BothOutputs:
-                _topping.ApplyState(AudioOutputMode.Both, false);
-                break;
-            case StartupBehavior.None:
-            default:
-                _topping.InitializeState(_config.LastOutputMode, _config.LastGainIsHigh);
-                break;
-        }
+        if (_startupStateApplied || !_topping.IsConnected)
+            return;
 
-        PersistStateAndRefresh();
+        _startupStateApplied = true;
+
+        if (_config.StartupState == StartupBehavior.None)
+            return;
+
+        Task.Run(() =>
+        {
+            switch (_config.StartupState)
+            {
+                case StartupBehavior.RestoreLastState:
+                    _topping.ApplyState(_config.LastOutputMode, _config.LastGainIsHigh);
+                    break;
+                case StartupBehavior.HeadphonesLowGain:
+                    _topping.ApplyState(AudioOutputMode.Headphones, false);
+                    break;
+                case StartupBehavior.HeadphonesHighGain:
+                    _topping.ApplyState(AudioOutputMode.Headphones, true);
+                    break;
+                case StartupBehavior.SpeakersOnly:
+                    _topping.ApplyState(AudioOutputMode.Speakers, false);
+                    break;
+                case StartupBehavior.BothOutputs:
+                    _topping.ApplyState(AudioOutputMode.Both, false);
+                    break;
+                case StartupBehavior.None:
+                    break;
+                default:
+                    break;
+            }
+
+            Dispatcher.BeginInvoke(PersistStateAndRefresh);
+        });
     }
 
     private void SelectStartupBehaviorItem(StartupBehavior behavior)
     {
-        string tag = behavior.ToString();
+        string behaviorTag = behavior.ToString();
         foreach (ComboBoxItem item in StartupBehaviorComboBox.Items)
-        {
-            if (item.Tag?.ToString() == tag)
+            if (item.Tag?.ToString() == behaviorTag)
             {
                 StartupBehaviorComboBox.SelectedItem = item;
                 break;
             }
-        }
     }
 
-    private void StartupBehaviorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (StartupBehaviorComboBox.SelectedItem is ComboBoxItem item && Enum.TryParse<StartupBehavior>(item.Tag?.ToString(), out var behavior))
-        {
-            _config.StartupState = behavior;
-            _config.Save();
-        }
-    }
-
-    private void OnHardwareGainChanged(bool gainIsHigh)
-    {
+    private void OnHardwareGainChanged(bool gainIsHigh) =>
         Dispatcher.BeginInvoke(() =>
         {
+            if (_allowClose)
+                return;
             _config.LastGainIsHigh = gainIsHigh;
             _config.Save();
             UpdateTrayState();
         });
-    }
 
-    private void OnHardwareOutputModeChanged(AudioOutputMode mode)
-    {
+    private void OnHardwareOutputModeChanged(AudioOutputMode mode) =>
         Dispatcher.BeginInvoke(() =>
         {
+            if (_allowClose)
+                return;
             _config.LastOutputMode = mode;
             _config.Save();
             UpdateTrayState();
         });
-    }
 
-    private void OnHardwareConnectionChanged(bool isConnected)
-    {
-        Dispatcher.BeginInvoke(UpdateConnectionStatus);
-    }
-
-    private void UpdateConnectionStatus()
-    {
-        if (_topping.IsConnected)
+    private void OnHardwareConnectionChanged(bool isConnected) =>
+        Dispatcher.BeginInvoke(() =>
         {
-            StatusFooterText.Text = $"● Connected (VID: 0x{ToppingService.Vid:X4}, PID: 0x{ToppingService.Pid:X4})";
-            StatusFooterText.Foreground = (WpfBrush)FindResource("SystemFillColorSuccessBrush");
-        }
-        else
-        {
-            StatusFooterText.Text = "○ Disconnected (TOPPING E2x2 not detected)";
-            StatusFooterText.Foreground = (WpfBrush)FindResource("SystemFillColorCriticalBrush");
-        }
-    }
-
-    private void StartWithWindowsToggle_Click(object sender, RoutedEventArgs e)
-    {
-        StartupService.SetStartWithWindows(StartWithWindowsToggle.IsChecked == true);
-    }
-
-    private void SystemEvents_UserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
-    {
-        Dispatcher.Invoke(() =>
-        {
-            UpdateTrayState();
-            UpdateContextMenuTheme();
+            if (_allowClose)
+                return;
+            UpdateConnectionStatus();
+            if (isConnected)
+                ApplyInitialStartupState();
         });
-    }
 
     private void RegisterHotkeys()
     {
         _hotkeys.UnregisterAll();
-        _idHp = _hotkeys.Register(_config.HeadphonesOnly.Modifiers, _config.HeadphonesOnly.Key);
-        _idSpk = _hotkeys.Register(_config.SpeakersOnly.Modifiers, _config.SpeakersOnly.Key);
-        _idGain = _hotkeys.Register(_config.GainToggle.Modifiers, _config.GainToggle.Key);
-        _idBoth = _hotkeys.Register(_config.BothEnabled.Modifiers, _config.BothEnabled.Key);
+        _headphonesHotkeyId = _hotkeys.Register(_config.HeadphonesOnly.Modifiers, _config.HeadphonesOnly.Key);
+        _speakersHotkeyId = _hotkeys.Register(_config.SpeakersOnly.Modifiers, _config.SpeakersOnly.Key);
+        _gainHotkeyId = _hotkeys.Register(_config.GainToggle.Modifiers, _config.GainToggle.Key);
+        _bothHotkeyId = _hotkeys.Register(_config.BothEnabled.Modifiers, _config.BothEnabled.Key);
+    }
+
+    #endregion
+
+    #region UI & Tray Updates
+
+    /// <summary>Restores the window from the system tray and brings it to the foreground.</summary>
+    public void RestoreFromTray()
+    {
+        if (_allowClose)
+            return;
+
+        Show();
+        if (WindowState == WindowState.Minimized)
+            WindowState = WindowState.Normal;
+        bool wasTopmost = Topmost;
+        Topmost = true;
+        Activate();
+        Topmost = wasTopmost;
+        Focus();
+    }
+
+    /// <summary>Permits the window to close permanently during application shutdown or OS session ending.</summary>
+    public void PrepareForShutdown() => _allowClose = true;
+
+    private void UpdateConnectionStatus()
+    {
+        StatusFooterText.Text = _topping.IsConnected ? $"● Connected (VID: 0x{ToppingService.VendorId:X4}, PID: 0x{ToppingService.ProductId:X4})" : "○ Disconnected (TOPPING E2x2 not detected)";
+        StatusFooterText.Foreground = (WpfBrush)FindResource(_topping.IsConnected ? "SystemFillColorSuccessBrush" : "SystemFillColorCriticalBrush");
     }
 
     private void UpdateAllPills()
     {
-        RenderPillPlate(PillsHp, _config.HeadphonesOnly);
-        RenderPillPlate(PillsSpk, _config.SpeakersOnly);
-        RenderPillPlate(PillsGain, _config.GainToggle);
-        RenderPillPlate(PillsBoth, _config.BothEnabled);
+        RenderPillPlate(HeadphonesPillsPanel, _config.HeadphonesOnly);
+        RenderPillPlate(SpeakersPillsPanel, _config.SpeakersOnly);
+        RenderPillPlate(GainPillsPanel, _config.GainToggle);
+        RenderPillPlate(BothPillsPanel, _config.BothEnabled);
     }
 
     private void RenderPillPlate(StackPanel panel, HotkeyBinding binding)
     {
         panel.Children.Clear();
 
-        foreach (var label in binding.GetKeyLabels())
-        {
+        foreach (string label in binding.GetKeyLabels())
             panel.Children.Add(
                 new Border
                 {
@@ -239,7 +235,6 @@ public partial class MainWindow : FluentWindow
                     },
                 }
             );
-        }
 
         panel.Children.Add(
             new SymbolIcon
@@ -252,44 +247,11 @@ public partial class MainWindow : FluentWindow
         );
     }
 
-    private void OnHotkeyPressed(int id)
-    {
-        if (id == _idHp)
-            SetHeadphonesMode();
-        if (id == _idSpk)
-            SetSpeakersMode();
-        if (id == _idGain)
-            ToggleGainMode();
-        if (id == _idBoth)
-            SetBothMode();
-    }
-
-    private void SetHeadphonesMode()
-    {
-        _topping.SetHeadphonesOnly();
-        PersistStateAndRefresh();
-    }
-
-    private void SetSpeakersMode()
-    {
-        _topping.SetSpeakersOnly();
-        PersistStateAndRefresh();
-    }
-
-    private void SetBothMode()
-    {
-        _topping.SetBoth();
-        PersistStateAndRefresh();
-    }
-
-    private void ToggleGainMode()
-    {
-        _topping.ToggleGain();
-        PersistStateAndRefresh();
-    }
-
     private void PersistStateAndRefresh()
     {
+        if (_allowClose)
+            return;
+
         _config.LastOutputMode = _topping.CurrentMode;
         _config.LastGainIsHigh = _topping.GainIsHigh;
         _config.Save();
@@ -302,11 +264,11 @@ public partial class MainWindow : FluentWindow
         if (_trayIcon == null)
             return;
 
-        Icon? oldIcon = _currentTrayIcon;
+        Icon? previousIcon = _currentTrayIcon;
         _currentTrayIcon = TrayIconService.GetTrayIcon(_topping.CurrentMode, _topping.GainIsHigh);
         _trayIcon.Icon = _currentTrayIcon;
 
-        oldIcon?.Dispose();
+        previousIcon?.Dispose();
 
         string modeName = _topping.CurrentMode switch
         {
@@ -319,103 +281,6 @@ public partial class MainWindow : FluentWindow
         _trayIcon.Text = $"{E2x2SwitchConstants.Name} - {modeName} ({gainText})";
     }
 
-    private void OpenShortcutDialog(string title, Func<AppConfig, HotkeyBinding> getter, Action<AppConfig, HotkeyBinding> setter)
-    {
-        var dialog = new HotkeyDialog(title, getter(_config)) { Owner = this };
-        if (dialog.ShowDialog() == true)
-        {
-            setter(_config, dialog.ResultBinding);
-            _config.Save();
-            RegisterHotkeys();
-            UpdateAllPills();
-        }
-    }
-
-    private void CardHp_Click(object sender, MouseButtonEventArgs e) => SetHeadphonesMode();
-
-    private void CardSpk_Click(object sender, MouseButtonEventArgs e) => SetSpeakersMode();
-
-    private void CardGain_Click(object sender, MouseButtonEventArgs e) => ToggleGainMode();
-
-    private void CardBoth_Click(object sender, MouseButtonEventArgs e) => SetBothMode();
-
-    private void EditHp_Click(object sender, RoutedEventArgs e)
-    {
-        e.Handled = true;
-        OpenShortcutDialog("Headphones only shortcut", c => c.HeadphonesOnly, (c, b) => c.HeadphonesOnly = b);
-    }
-
-    private void EditSpk_Click(object sender, RoutedEventArgs e)
-    {
-        e.Handled = true;
-        OpenShortcutDialog("Speakers only shortcut", c => c.SpeakersOnly, (c, b) => c.SpeakersOnly = b);
-    }
-
-    private void EditGain_Click(object sender, RoutedEventArgs e)
-    {
-        e.Handled = true;
-        OpenShortcutDialog("Gain toggle shortcut", c => c.GainToggle, (c, b) => c.GainToggle = b);
-    }
-
-    private void EditBoth_Click(object sender, RoutedEventArgs e)
-    {
-        e.Handled = true;
-        OpenShortcutDialog("Both outputs shortcut", c => c.BothEnabled, (c, b) => c.BothEnabled = b);
-    }
-
-    private void SetupTray()
-    {
-        try
-        {
-            _trayIcon = new NotifyIcon { Visible = true, Text = E2x2SwitchConstants.Name };
-            _trayIcon.DoubleClick += (s, e) =>
-            {
-                Show();
-                WindowState = WindowState.Normal;
-                Activate();
-            };
-
-            var menu = new ContextMenuStrip { ShowImageMargin = false, DropShadowEnabled = true };
-
-            menu.Items.Add(new ToolStripMenuItem("Headphones Only", null, (s, e) => SetHeadphonesMode()));
-            menu.Items.Add(new ToolStripMenuItem("Speakers Only", null, (s, e) => SetSpeakersMode()));
-            menu.Items.Add(new ToolStripMenuItem("Both Outputs", null, (s, e) => SetBothMode()));
-            menu.Items.Add(new ToolStripMenuItem("Gain Toggle", null, (s, e) => ToggleGainMode()));
-            menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(
-                new ToolStripMenuItem(
-                    $"Open {E2x2SwitchConstants.Name}",
-                    null,
-                    (s, e) =>
-                    {
-                        Show();
-                        WindowState = WindowState.Normal;
-                        Activate();
-                    }
-                )
-            );
-            menu.Items.Add(
-                new ToolStripMenuItem(
-                    "Exit",
-                    null,
-                    (s, e) =>
-                    {
-                        _trayIcon.Visible = false;
-                        System.Windows.Application.Current.Shutdown();
-                    }
-                )
-            );
-
-            menu.Opened += (s, e) => UpdateContextMenuTheme();
-            _trayIcon.ContextMenuStrip = menu;
-            UpdateContextMenuTheme();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Tray setup warning: {ex.Message}");
-        }
-    }
-
     private void UpdateContextMenuTheme()
     {
         if (_trayIcon?.ContextMenuStrip == null)
@@ -425,10 +290,8 @@ public partial class MainWindow : FluentWindow
         _trayIcon.ContextMenuStrip.Renderer = new ThemeAwareContextMenuRenderer(isLight);
 
         GdiColor textColor = isLight ? GdiColor.FromArgb(25, 25, 25) : GdiColor.White;
-        foreach (ToolStripItem item in _trayIcon.ContextMenuStrip.Items)
-        {
-            item.ForeColor = textColor;
-        }
+        foreach (ToolStripItem menuItem in _trayIcon.ContextMenuStrip.Items)
+            menuItem.ForeColor = textColor;
 
         if (_trayIcon.ContextMenuStrip.IsHandleCreated)
         {
@@ -437,20 +300,207 @@ public partial class MainWindow : FluentWindow
         }
     }
 
-    private void MainWindow_Closing(object? sender, CancelEventArgs e)
+    #endregion
+
+    #region Hotkey/Card Handlers
+
+    private void OnHotkeyPressed(int hotkeyId)
     {
-        e.Cancel = true;
+        if (hotkeyId == _headphonesHotkeyId)
+            SetHeadphonesMode();
+        else if (hotkeyId == _speakersHotkeyId)
+            SetSpeakersMode();
+        else if (hotkeyId == _gainHotkeyId)
+            ToggleGainMode();
+        else if (hotkeyId == _bothHotkeyId)
+            SetBothMode();
+    }
+
+    private void SetHeadphonesMode()
+    {
+        _startupStateApplied = true;
+        _topping.SetHeadphonesOnly();
+        PersistStateAndRefresh();
+    }
+
+    private void SetSpeakersMode()
+    {
+        _startupStateApplied = true;
+        _topping.SetSpeakersOnly();
+        PersistStateAndRefresh();
+    }
+
+    private void SetBothMode()
+    {
+        _startupStateApplied = true;
+        _topping.SetBoth();
+        PersistStateAndRefresh();
+    }
+
+    private void ToggleGainMode()
+    {
+        _startupStateApplied = true;
+        _topping.ToggleGain();
+        PersistStateAndRefresh();
+    }
+
+    private void OpenShortcutDialog(string title, Func<AppConfig, HotkeyBinding> getter, Action<AppConfig, HotkeyBinding> setter)
+    {
+        _hotkeys.UnregisterAll();
+        try
+        {
+            var dialog = new HotkeyDialog(title, getter(_config)) { Owner = this };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            setter(_config, dialog.ResultBinding);
+            _config.Save();
+            UpdateAllPills();
+        }
+        finally
+        {
+            RegisterHotkeys();
+        }
+    }
+
+    private void HeadphonesCard_MouseLeftButtonUp(object sender, MouseButtonEventArgs eventArgs) => SetHeadphonesMode();
+
+    private void SpeakersCard_MouseLeftButtonUp(object sender, MouseButtonEventArgs eventArgs) => SetSpeakersMode();
+
+    private void GainCard_MouseLeftButtonUp(object sender, MouseButtonEventArgs eventArgs) => ToggleGainMode();
+
+    private void BothCard_MouseLeftButtonUp(object sender, MouseButtonEventArgs eventArgs) => SetBothMode();
+
+    private void EditHeadphones_Click(object sender, RoutedEventArgs eventArgs)
+    {
+        eventArgs.Handled = true;
+        OpenShortcutDialog("Headphones only shortcut", config => config.HeadphonesOnly, (config, binding) => config.HeadphonesOnly = binding);
+    }
+
+    private void EditSpeakers_Click(object sender, RoutedEventArgs eventArgs)
+    {
+        eventArgs.Handled = true;
+        OpenShortcutDialog("Speakers only shortcut", config => config.SpeakersOnly, (config, binding) => config.SpeakersOnly = binding);
+    }
+
+    private void EditGain_Click(object sender, RoutedEventArgs eventArgs)
+    {
+        eventArgs.Handled = true;
+        OpenShortcutDialog("Gain toggle shortcut", config => config.GainToggle, (config, binding) => config.GainToggle = binding);
+    }
+
+    private void EditBoth_Click(object sender, RoutedEventArgs eventArgs)
+    {
+        eventArgs.Handled = true;
+        OpenShortcutDialog("Both outputs shortcut", config => config.BothEnabled, (config, binding) => config.BothEnabled = binding);
+    }
+
+    private void StartupBehaviorComboBox_SelectionChanged(object sender, SelectionChangedEventArgs eventArgs)
+    {
+        if (StartupBehaviorComboBox.SelectedItem is ComboBoxItem item && Enum.TryParse(item.Tag?.ToString(), out StartupBehavior behavior))
+        {
+            _config.StartupState = behavior;
+            _config.Save();
+        }
+    }
+
+    private void StartWithWindowsToggle_Click(object sender, RoutedEventArgs eventArgs) => StartupService.SetStartWithWindows(StartWithWindowsToggle.IsChecked == true);
+
+    #endregion
+
+    #region Wndw/Tray Lifecycle
+
+    /// <summary>Handles Esc key presses to close open dropdowns or clear control focus highlights.</summary>
+    /// <param name="eventArgs">Keyboard event arguments.</param>
+    protected override void OnPreviewKeyDown(WpfKeyEventArgs eventArgs)
+    {
+        if (eventArgs.Key == Key.Escape)
+        {
+            if (StartupBehaviorComboBox.IsDropDownOpen)
+            {
+                StartupBehaviorComboBox.IsDropDownOpen = false;
+                eventArgs.Handled = true;
+                return;
+            }
+
+            // Clear keyboard focus from any control to remove the focus highlight
+            Keyboard.ClearFocus();
+            Focus();
+            eventArgs.Handled = true;
+            return;
+        }
+
+        base.OnPreviewKeyDown(eventArgs);
+    }
+
+    private void SystemEvents_UserPreferenceChanged(object sender, UserPreferenceChangedEventArgs eventArgs) =>
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (_allowClose)
+                return;
+            UpdateTrayState();
+            UpdateContextMenuTheme();
+        });
+
+    private void SetupTray()
+    {
+        try
+        {
+            _trayIcon = new NotifyIcon { Visible = true, Text = E2x2SwitchConstants.Name };
+            _trayIcon.DoubleClick += (sender, eventArgs) => RestoreFromTray();
+
+            var menu = new ContextMenuStrip { ShowImageMargin = false, DropShadowEnabled = true };
+
+            menu.HandleCreated += (sender, eventArgs) => UpdateContextMenuTheme();
+            menu.Opened += (sender, eventArgs) => UpdateContextMenuTheme();
+            menu.Items.Add(new ToolStripMenuItem("Headphones Only", null, (sender, eventArgs) => SetHeadphonesMode()));
+            menu.Items.Add(new ToolStripMenuItem("Speakers Only", null, (sender, eventArgs) => SetSpeakersMode()));
+            menu.Items.Add(new ToolStripMenuItem("Both Outputs", null, (sender, eventArgs) => SetBothMode()));
+            menu.Items.Add(new ToolStripMenuItem("Gain Toggle", null, (sender, eventArgs) => ToggleGainMode()));
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add(new ToolStripMenuItem($"Open {E2x2SwitchConstants.Name}", null, (sender, eventArgs) => RestoreFromTray()));
+            menu.Items.Add(new ToolStripMenuItem("Exit", null, (sender, eventArgs) =>
+                {
+                    PrepareForShutdown();
+                    WpfApplication.Current.Shutdown();
+                }));
+
+            _trayIcon.ContextMenuStrip = menu;
+            UpdateContextMenuTheme();
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"Tray setup warning: {exception.Message}");
+        }
+    }
+
+    private void MainWindow_Closing(object? sender, CancelEventArgs eventArgs)
+    {
+        if (_allowClose)
+            return;
+
+        eventArgs.Cancel = true;
         Hide();
     }
 
-    protected override void OnClosed(EventArgs e)
+    /// <summary>Stops active timers, unhooks events, and disposes native tray and HID resources.</summary>
+    /// <param name="eventArgs">Event data for window closure.</param>
+    protected override void OnClosed(EventArgs eventArgs)
     {
-        _heartbeatTimer.Stop();
+        _allowClose = true;
         SystemEvents.UserPreferenceChanged -= SystemEvents_UserPreferenceChanged;
         _hotkeys.Dispose();
-        _trayIcon?.Dispose();
+        if (_trayIcon != null)
+        {
+            _trayIcon.Visible = false;
+            _trayIcon.Dispose();
+            _trayIcon = null;
+        }
         _currentTrayIcon?.Dispose();
+        _currentTrayIcon = null;
         _topping.Dispose();
-        base.OnClosed(e);
+        base.OnClosed(eventArgs);
     }
+
+    #endregion
 }

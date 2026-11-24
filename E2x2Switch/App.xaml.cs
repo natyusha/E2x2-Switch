@@ -1,17 +1,27 @@
 using System.Windows;
 using System.Windows.Threading;
 using E2x2Switch.Views;
+using WpfApplication = System.Windows.Application;
+using WpfMessageBox = System.Windows.MessageBox;
 
 namespace E2x2Switch;
 
 /// <summary>Interaction logic for App.xaml</summary>
-public partial class App : System.Windows.Application
+public partial class App : WpfApplication
 {
-    private static readonly string s_appEventName = $"{E2x2SwitchConstants.Name.Replace(" ", "")}_SingleInstance_Event";
+    #region Fields
+
+    private static readonly string s_appEventName = $@"Local\{E2x2SwitchConstants.Name.Replace(" ", "")}_SingleInstance_Event";
     private static EventWaitHandle? s_instanceEvent;
     private static Thread? s_eventThread;
 
-    protected override void OnStartup(StartupEventArgs e)
+    #endregion
+
+    #region Lifecycle
+
+    /// <summary>Initializes single-instance coordination, exception handlers, and the main window.</summary>
+    /// <param name="eventArgs">Command-line arguments passed at application startup.</param>
+    protected override void OnStartup(StartupEventArgs eventArgs)
     {
         s_instanceEvent = new EventWaitHandle(false, EventResetMode.AutoReset, s_appEventName, out bool isNewInstance);
 
@@ -25,35 +35,24 @@ public partial class App : System.Windows.Application
         DispatcherUnhandledException += App_DispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
-        base.OnStartup(e);
+        base.OnStartup(eventArgs);
 
-        bool startInTray = e.Args.Any(arg => arg.Equals("--tray", StringComparison.OrdinalIgnoreCase) || arg.Equals("-tray", StringComparison.OrdinalIgnoreCase));
-
+        bool startInTray = eventArgs.Args.Any(argument => argument.Equals("--tray", StringComparison.OrdinalIgnoreCase) || argument.Equals("-tray", StringComparison.OrdinalIgnoreCase));
         var mainWindow = new MainWindow();
 
+        SessionEnding += (sender, sessionEventArgs) => mainWindow.PrepareForShutdown();
+
         if (!startInTray)
-        {
             mainWindow.Show();
-        }
 
         // Listen for launch signals from secondary instances with safe disposal handling
+        EventWaitHandle activeEvent = s_instanceEvent;
         s_eventThread = new Thread(() =>
         {
             try
             {
-                while (s_instanceEvent != null && s_instanceEvent.WaitOne())
-                {
-                    Dispatcher.BeginInvoke(() =>
-                    {
-                        mainWindow.Show();
-                        if (mainWindow.WindowState == WindowState.Minimized)
-                        {
-                            mainWindow.WindowState = WindowState.Normal;
-                        }
-                        mainWindow.Activate();
-                        mainWindow.Focus();
-                    });
-                }
+                while (activeEvent.WaitOne())
+                    Dispatcher.BeginInvoke(mainWindow.RestoreFromTray);
             }
             catch (ObjectDisposedException) { }
         })
@@ -63,29 +62,35 @@ public partial class App : System.Windows.Application
         s_eventThread.Start();
     }
 
-    protected override void OnExit(ExitEventArgs e)
+    /// <summary>Releases single-instance synchronization resources on application exit.</summary>
+    /// <param name="eventArgs">Exit event data.</param>
+    protected override void OnExit(ExitEventArgs eventArgs)
     {
         s_instanceEvent?.Dispose();
         s_instanceEvent = null;
-        base.OnExit(e);
+        base.OnExit(eventArgs);
     }
 
-    private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    #endregion
+
+    #region Exception Handlers
+
+    private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs eventArgs)
     {
-        System.Windows.MessageBox.Show(
-            $"Dispatcher Exception:\n\n{e.Exception.Message}\n\nStack Trace:\n{e.Exception.StackTrace}",
+        WpfMessageBox.Show(
+            $"Dispatcher Exception:\n\n{eventArgs.Exception.Message}\n\nStack Trace:\n{eventArgs.Exception.StackTrace}",
             $"{E2x2SwitchConstants.Name} Error",
             MessageBoxButton.OK,
             MessageBoxImage.Error
         );
-        e.Handled = true;
+        eventArgs.Handled = true;
     }
 
-    private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+    private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs eventArgs)
     {
-        if (e.ExceptionObject is Exception ex)
-        {
-            System.Windows.MessageBox.Show($"Fatal Exception:\n\n{ex.Message}\n\nStack Trace:\n{ex.StackTrace}", $"{E2x2SwitchConstants.Name} Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
+        if (eventArgs.ExceptionObject is Exception exception)
+            WpfMessageBox.Show($"Fatal Exception:\n\n{exception.Message}\n\nStack Trace:\n{exception.StackTrace}", $"{E2x2SwitchConstants.Name} Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
     }
+
+    #endregion
 }

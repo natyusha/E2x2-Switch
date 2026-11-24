@@ -3,347 +3,346 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  Title="E2x2 Switch"
-                Height="530"
-                Width="680"
+                 Height="530"
+                 Width="680"
                  MinHeight="360"
-                MinWidth="520"
+                 MinWidth="520"
                  WindowStartupLocation="CenterScreen"
                  WindowBackdropType="Mica"
                  ExtendsContentIntoTitleBar="True"
                  Focusable="False"
                  FocusVisualStyle="{x:Null}">
 
-        <ui:FluentWindow.Resources>
-                <!-- Fluent Hotkey Button Plate -->
-                <Style x:Key="HotkeyPlateStyle"
-                                TargetType="Button">
-                        <Setter Property="Background"
-                                        Value="{DynamicResource ControlFillColorDefaultBrush}"/>
-                        <Setter Property="BorderBrush"
-                                        Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
-                        <Setter Property="BorderThickness"
-                                        Value="1"/>
-                        <Setter Property="Cursor"
-                                        Value="Hand"/>
-                        <Setter Property="Padding"
-                                        Value="6,4,8,4"/>
-                        <Setter Property="Template">
-                                <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                                <Border x:Name="border"
-                                                        Background="{TemplateBinding Background}"
-                                                        BorderBrush="{TemplateBinding BorderBrush}"
-                                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                                        CornerRadius="6"
-                                                        Padding="{TemplateBinding Padding}">
-                                                        <ContentPresenter HorizontalAlignment="Center"
-                                                                        VerticalAlignment="Center"/>
-                                                </Border>
-                                                <ControlTemplate.Triggers>
-                                                        <Trigger Property="IsMouseOver"
-                                                                        Value="True">
-                                                                <Setter TargetName="border"
-                                                                                Property="Background"
-                                                                                Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
-                                                                <Setter TargetName="border"
-                                                                                Property="BorderBrush"
-                                                                                Value="{DynamicResource ControlStrokeColorSecondaryBrush}"/>
-                                                        </Trigger>
-                                                        <Trigger Property="IsPressed"
-                                                                        Value="True">
-                                                                <Setter TargetName="border"
-                                                                                Property="Background"
-                                                                                Value="{DynamicResource ControlFillColorTertiaryBrush}"/>
-                                                        </Trigger>
-                                                </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                </Setter.Value>
-                        </Setter>
-                </Style>
-        </ui:FluentWindow.Resources>
+  <ui:FluentWindow.Resources>
+    <!-- Fluent Hotkey Button Plate -->
+    <Style x:Key="HotkeyPlateStyle"
+           TargetType="Button">
+      <Setter Property="Background"
+              Value="{DynamicResource ControlFillColorDefaultBrush}"/>
+      <Setter Property="BorderBrush"
+              Value="{DynamicResource ControlStrokeColorDefaultBrush}"/>
+      <Setter Property="BorderThickness"
+              Value="1"/>
+      <Setter Property="Cursor"
+              Value="Hand"/>
+      <Setter Property="Padding"
+              Value="6,4,8,4"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="border"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="6"
+                    Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center"
+                                VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver"
+                       Value="True">
+                <Setter TargetName="border"
+                        Property="Background"
+                        Value="{DynamicResource ControlFillColorSecondaryBrush}"/>
+                <Setter TargetName="border"
+                        Property="BorderBrush"
+                        Value="{DynamicResource ControlStrokeColorSecondaryBrush}"/>
+              </Trigger>
+              <Trigger Property="IsPressed"
+                       Value="True">
+                <Setter TargetName="border"
+                        Property="Background"
+                        Value="{DynamicResource ControlFillColorTertiaryBrush}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </ui:FluentWindow.Resources>
 
-        <Grid Focusable="False"
-                        FocusVisualStyle="{x:Null}">
-                <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+  <Grid Focusable="False"
+        FocusVisualStyle="{x:Null}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
 
-                <!-- 1. Native Title Bar -->
-                <ui:TitleBar Grid.Row="0"
-                                Title="E2x2 Switch"
-                                ShowMaximize="False">
-                        <ui:TitleBar.Icon>
-                                <ui:SymbolIcon Symbol="SpeakerSettings24"
-                                                FontSize="16"/>
-                        </ui:TitleBar.Icon>
-                </ui:TitleBar>
+    <!-- 1. Native Title Bar -->
+    <ui:TitleBar Grid.Row="0"
+                 Title="E2x2 Switch"
+                 ShowMaximize="False">
+      <ui:TitleBar.Icon>
+        <ui:SymbolIcon Symbol="SpeakerSettings24"
+                       FontSize="16"/>
+      </ui:TitleBar.Icon>
+    </ui:TitleBar>
 
-                <!-- 2. Scrollable Body Content -->
-                <ScrollViewer Grid.Row="1"
-                              Focusable="False"
-                              FocusVisualStyle="{x:Null}"
-                              VerticalScrollBarVisibility="Auto"
-                              HorizontalScrollBarVisibility="Disabled"
-                              Padding="24,6,24,10">
-                        <StackPanel Focusable="False">
-                                <!-- Section 1: Output Selection -->
-                                <StackPanel Margin="0,4,0,12">
-                                        <ui:TextBlock Text="Output Selection"
-                                                        FontTypography="Title"/>
-                                        <ui:TextBlock Text="Global shortcuts for TOPPING E2x2 audio routing"
-                                                      FontTypography="Body"
-                                                      TextWrapping="Wrap"
-                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                </StackPanel>
+    <!-- 2. Scrollable Body Content -->
+    <ScrollViewer Grid.Row="1"
+                  Focusable="False"
+                  FocusVisualStyle="{x:Null}"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  Padding="24,6,24,10">
+      <StackPanel Focusable="False">
+        <!-- Section 1: Output Selection -->
+        <StackPanel Margin="0,4,0,12">
+          <ui:TextBlock Text="Output Selection"
+                        FontTypography="Title"/>
+          <ui:TextBlock Text="Global shortcuts for TOPPING E2x2 audio routing"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
 
-                                <!-- Cards List -->
-                                <StackPanel>
-                                        <!-- 1. Headphones Card -->
-                                        <ui:Card Margin="0,0,0,6"
-                                                        Padding="14,10"
-                                                        Cursor="Hand"
-                                                        MouseLeftButtonUp="CardHp_Click">
-                                                <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
+        <!-- Cards List -->
+        <StackPanel>
+          <!-- 1. Headphones Card -->
+          <ui:Card Margin="0,0,0,6"
+                   Padding="14,10"
+                   Cursor="Hand"
+                   MouseLeftButtonUp="HeadphonesCard_MouseLeftButtonUp">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
 
-                                                        <ui:SymbolIcon Symbol="Headphones24"
-                                                                        FontSize="20"
-                                                                        Margin="0,0,16,0"/>
+              <ui:SymbolIcon Symbol="Headphones24"
+                             FontSize="20"
+                             Margin="0,0,16,0"/>
 
-                                                        <StackPanel Grid.Column="1"
-                                                                        VerticalAlignment="Center"
-                                                                        Margin="0,0,16,0">
-                                                                <ui:TextBlock Text="Headphones only shortcut"
-                                                                                FontTypography="BodyStrong"/>
-                                                                <ui:TextBlock Text="Mutes speakers and enables headphone output"
-                                                                              FontTypography="Caption"
-                                                                              TextWrapping="Wrap"
-                                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                                        </StackPanel>
-
-                                                        <Button Grid.Column="2"
-                                                                        Style="{StaticResource HotkeyPlateStyle}"
-                                                                        Click="EditHp_Click">
-                                                                <StackPanel x:Name="PillsHp"
-                                                                                Orientation="Horizontal"
-                                                                                VerticalAlignment="Center"/>
-                                                        </Button>
-                                                </Grid>
-                                        </ui:Card>
-
-                                        <!-- 2. Speakers Card -->
-                                        <ui:Card Margin="0,0,0,6"
-                                                        Padding="14,10"
-                                                        Cursor="Hand"
-                                                        MouseLeftButtonUp="CardSpk_Click">
-                                                <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-
-                                                        <ui:SymbolIcon Symbol="Speaker224"
-                                                                        FontSize="20"
-                                                                        Margin="0,0,16,0"/>
-
-                                                        <StackPanel Grid.Column="1"
-                                                                        VerticalAlignment="Center"
-                                                                        Margin="0,0,16,0">
-                                                                <ui:TextBlock Text="Speakers only shortcut"
-                                                                                FontTypography="BodyStrong"/>
-                                                                <ui:TextBlock Text="Mutes headphones and routes audio to line out"
-                                                                              FontTypography="Caption"
-                                                                              TextWrapping="Wrap"
-                                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                                        </StackPanel>
-
-                                                        <Button Grid.Column="2"
-                                                                        Style="{StaticResource HotkeyPlateStyle}"
-                                                                        Click="EditSpk_Click">
-                                                                <StackPanel x:Name="PillsSpk"
-                                                                                Orientation="Horizontal"
-                                                                                VerticalAlignment="Center"/>
-                                                        </Button>
-                                                </Grid>
-                                        </ui:Card>
-
-                                        <!-- 3. Gain Toggle Card -->
-                                        <ui:Card Margin="0,0,0,6"
-                                                        Padding="14,10"
-                                                        Cursor="Hand"
-                                                        MouseLeftButtonUp="CardGain_Click">
-                                                <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-
-                                                        <ui:SymbolIcon Symbol="Flash24"
-                                                                        FontSize="20"
-                                                                        Margin="0,0,16,0"/>
-
-                                                        <StackPanel Grid.Column="1"
-                                                                        VerticalAlignment="Center"
-                                                                        Margin="0,0,16,0">
-                                                                <ui:TextBlock Text="Gain toggle shortcut"
-                                                                                FontTypography="BodyStrong"/>
-                                                                <ui:TextBlock Text="Toggles amplifier between 0dBu and +17dBu"
-                                                                              FontTypography="Caption"
-                                                                              TextWrapping="Wrap"
-                                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                                        </StackPanel>
-
-                                                        <Button Grid.Column="2"
-                                                                        Style="{StaticResource HotkeyPlateStyle}"
-                                                                        Click="EditGain_Click">
-                                                                <StackPanel x:Name="PillsGain"
-                                                                                Orientation="Horizontal"
-                                                                                VerticalAlignment="Center"/>
-                                                        </Button>
-                                                </Grid>
-                                        </ui:Card>
-
-                                        <!-- 4. Both Outputs Card -->
-                                        <ui:Card Margin="0,0,0,6"
-                                                        Padding="14,10"
-                                                        Cursor="Hand"
-                                                        MouseLeftButtonUp="CardBoth_Click">
-                                                <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                                <ColumnDefinition Width="*"/>
-                                                                <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-
-                                                        <ui:SymbolIcon Symbol="SoundSource24"
-                                                                        FontSize="20"
-                                                                        Margin="0,0,16,0"/>
-
-                                                        <StackPanel Grid.Column="1"
-                                                                        VerticalAlignment="Center"
-                                                                        Margin="0,0,16,0">
-                                                                <ui:TextBlock Text="Both outputs shortcut"
-                                                                                FontTypography="BodyStrong"/>
-                                                                <ui:TextBlock Text="Headphones and Speakers enabled simultaneously"
-                                                                              FontTypography="Caption"
-                                                                              TextWrapping="Wrap"
-                                                                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                                        </StackPanel>
-
-                                                        <Button Grid.Column="2"
-                                                                        Style="{StaticResource HotkeyPlateStyle}"
-                                                                        Click="EditBoth_Click">
-                                                                <StackPanel x:Name="PillsBoth"
-                                                                                Orientation="Horizontal"
-                                                                                VerticalAlignment="Center"/>
-                                                        </Button>
-                                                </Grid>
-                                        </ui:Card>
-                                </StackPanel>
-
-                                <!-- Section 2: General Settings -->
-                                <StackPanel Margin="0,16,0,12">
-                                        <ui:TextBlock Text="General"
-                                                        FontTypography="Title"/>
-                                        <ui:TextBlock Text="Application startup preferences"
-                                                      FontTypography="Body"
-                                                      TextWrapping="Wrap"
-                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                </StackPanel>
-
-                                <!-- Startup State Card -->
-                                <ui:Card Margin="0,0,0,6"
-                                                Padding="14,10">
-                                        <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-
-                                                <ui:SymbolIcon Symbol="ArrowSync24"
-                                                                FontSize="20"
-                                                                Margin="0,0,16,0"/>
-
-                                                <StackPanel Grid.Column="1"
-                                                                VerticalAlignment="Center"
-                                                                Margin="0,0,16,0">
-                                                        <ui:TextBlock Text="Startup state"
-                                                                        FontTypography="BodyStrong"/>
-                                                        <ui:TextBlock Text="Audio routing and gain state to apply when launching"
-                                                                      FontTypography="Caption"
-                                                                      TextWrapping="Wrap"
-                                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                                </StackPanel>
-
-                                                <ComboBox Grid.Column="2"
-                                                                x:Name="StartupBehaviorComboBox"
-                                                          MinWidth="200"
-                                                                VerticalAlignment="Center"
-                                                          SelectionChanged="StartupBehaviorComboBox_SelectionChanged">
-                                                        <ComboBoxItem Content="Restore last active state"
-                                                                        Tag="RestoreLastState"/>
-                                                        <ComboBoxItem Content="Headphones Only (Low Gain)"
-                                                                        Tag="HeadphonesLowGain"/>
-                                                        <ComboBoxItem Content="Headphones Only (High Gain)"
-                                                                        Tag="HeadphonesHighGain"/>
-                                                        <ComboBoxItem Content="Speakers Only"
-                                                                        Tag="SpeakersOnly"/>
-                                                        <ComboBoxItem Content="Both Outputs"
-                                                                        Tag="BothOutputs"/>
-                                                        <ComboBoxItem Content="None (Keep hardware state)"
-                                                                        Tag="None"/>
-                                                </ComboBox>
-                                        </Grid>
-                                </ui:Card>
-
-                                <!-- Start with Windows Card -->
-                                <ui:Card Margin="0,0,0,6"
-                                                Padding="14,10">
-                                        <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-
-                                                <ui:SymbolIcon Symbol="Power24"
-                                                                FontSize="20"
-                                                                Margin="0,0,16,0"/>
-
-                                                <StackPanel Grid.Column="1"
-                                                                VerticalAlignment="Center"
-                                                                Margin="0,0,16,0">
-                                                        <ui:TextBlock Text="Start with Windows"
-                                                                        FontTypography="BodyStrong"/>
-                                                        <ui:TextBlock Text="Automatically launch E2x2 Switch in the system tray on startup"
-                                                                      FontTypography="Caption"
-                                                                      TextWrapping="Wrap"
-                                                                      Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
-                                                </StackPanel>
-
-                                                <ui:ToggleSwitch Grid.Column="2"
-                                                                x:Name="StartWithWindowsToggle"
-                                                                 Click="StartWithWindowsToggle_Click"/>
-                                        </Grid>
-                                </ui:Card>
-                        </StackPanel>
-                </ScrollViewer>
-
-                <!-- 3. Fixed Footer Status -->
-                <ui:TextBlock x:Name="StatusFooterText"
-                                Grid.Row="2"
-                              Text="● Connected (VID: 0x152A, PID: 0x8752)"
+              <StackPanel Grid.Column="1"
+                          VerticalAlignment="Center"
+                          Margin="0,0,16,0">
+                <ui:TextBlock Text="Headphones only shortcut"
+                              FontTypography="BodyStrong"/>
+                <ui:TextBlock Text="Mutes speakers and enables headphone output"
                               FontTypography="Caption"
-                                Foreground="{DynamicResource SystemFillColorSuccessBrush}"
-                              Margin="24,6,24,14"/>
-        </Grid>
+                              TextWrapping="Wrap"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+              </StackPanel>
+
+              <Button Grid.Column="2"
+                      Style="{StaticResource HotkeyPlateStyle}"
+                      Click="EditHeadphones_Click">
+                <StackPanel x:Name="HeadphonesPillsPanel"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"/>
+              </Button>
+            </Grid>
+          </ui:Card>
+
+          <!-- 2. Speakers Card -->
+          <ui:Card Margin="0,0,0,6"
+                   Padding="14,10"
+                   Cursor="Hand"
+                   MouseLeftButtonUp="SpeakersCard_MouseLeftButtonUp">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+
+              <ui:SymbolIcon Symbol="Speaker224"
+                             FontSize="20"
+                             Margin="0,0,16,0"/>
+
+              <StackPanel Grid.Column="1"
+                          VerticalAlignment="Center"
+                          Margin="0,0,16,0">
+                <ui:TextBlock Text="Speakers only shortcut"
+                              FontTypography="BodyStrong"/>
+                <ui:TextBlock Text="Mutes headphones and routes audio to line out"
+                              FontTypography="Caption"
+                              TextWrapping="Wrap"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+              </StackPanel>
+
+              <Button Grid.Column="2"
+                      Style="{StaticResource HotkeyPlateStyle}"
+                      Click="EditSpeakers_Click">
+                <StackPanel x:Name="SpeakersPillsPanel"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"/>
+              </Button>
+            </Grid>
+          </ui:Card>
+
+          <!-- 3. Gain Toggle Card -->
+          <ui:Card Margin="0,0,0,6"
+                   Padding="14,10"
+                   Cursor="Hand"
+                   MouseLeftButtonUp="GainCard_MouseLeftButtonUp">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+
+              <ui:SymbolIcon Symbol="Flash24"
+                             FontSize="20"
+                             Margin="0,0,16,0"/>
+
+              <StackPanel Grid.Column="1"
+                          VerticalAlignment="Center"
+                          Margin="0,0,16,0">
+                <ui:TextBlock Text="Gain toggle shortcut"
+                              FontTypography="BodyStrong"/>
+                <ui:TextBlock Text="Toggles amplifier between 0dBu and +17dBu"
+                              FontTypography="Caption"
+                              TextWrapping="Wrap"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+              </StackPanel>
+
+              <Button Grid.Column="2"
+                      Style="{StaticResource HotkeyPlateStyle}"
+                      Click="EditGain_Click">
+                <StackPanel x:Name="GainPillsPanel"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"/>
+              </Button>
+            </Grid>
+          </ui:Card>
+
+          <!-- 4. Both Outputs Card -->
+          <ui:Card Margin="0,0,0,6"
+                   Padding="14,10"
+                   Cursor="Hand"
+                   MouseLeftButtonUp="BothCard_MouseLeftButtonUp">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+
+              <ui:SymbolIcon Symbol="SoundSource24"
+                             FontSize="20"
+                             Margin="0,0,16,0"/>
+
+              <StackPanel Grid.Column="1"
+                          VerticalAlignment="Center"
+                          Margin="0,0,16,0">
+                <ui:TextBlock Text="Both outputs shortcut"
+                              FontTypography="BodyStrong"/>
+                <ui:TextBlock Text="Headphones and Speakers enabled simultaneously"
+                              FontTypography="Caption"
+                              TextWrapping="Wrap"
+                              Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+              </StackPanel>
+
+              <Button Grid.Column="2"
+                      Style="{StaticResource HotkeyPlateStyle}"
+                      Click="EditBoth_Click">
+                <StackPanel x:Name="BothPillsPanel"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"/>
+              </Button>
+            </Grid>
+          </ui:Card>
+        </StackPanel>
+
+        <!-- Section 2: General Settings -->
+        <StackPanel Margin="0,16,0,12">
+          <ui:TextBlock Text="General"
+                        FontTypography="Title"/>
+          <ui:TextBlock Text="Application startup preferences"
+                        FontTypography="Body"
+                        TextWrapping="Wrap"
+                        Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+
+        <!-- Startup State Card -->
+        <ui:Card Margin="0,0,0,6"
+                 Padding="14,10">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <ui:SymbolIcon Symbol="ArrowSync24"
+                           FontSize="20"
+                           Margin="0,0,16,0"/>
+
+            <StackPanel Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Margin="0,0,16,0">
+              <ui:TextBlock Text="Startup state"
+                            FontTypography="BodyStrong"/>
+              <ui:TextBlock Text="Audio routing and gain state to apply when launching"
+                            FontTypography="Caption"
+                            TextWrapping="Wrap"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+
+            <ComboBox Grid.Column="2"
+                      x:Name="StartupBehaviorComboBox"
+                      MinWidth="200"
+                      VerticalAlignment="Center">
+              <ComboBoxItem Content="Restore last active state"
+                            Tag="RestoreLastState"/>
+              <ComboBoxItem Content="Headphones Only (Low Gain)"
+                            Tag="HeadphonesLowGain"/>
+              <ComboBoxItem Content="Headphones Only (High Gain)"
+                            Tag="HeadphonesHighGain"/>
+              <ComboBoxItem Content="Speakers Only"
+                            Tag="SpeakersOnly"/>
+              <ComboBoxItem Content="Both Outputs"
+                            Tag="BothOutputs"/>
+              <ComboBoxItem Content="None (Keep hardware state)"
+                            Tag="None"/>
+            </ComboBox>
+          </Grid>
+        </ui:Card>
+
+        <!-- Start with Windows Card -->
+        <ui:Card Margin="0,0,0,6"
+                 Padding="14,10">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <ui:SymbolIcon Symbol="Power24"
+                           FontSize="20"
+                           Margin="0,0,16,0"/>
+
+            <StackPanel Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Margin="0,0,16,0">
+              <ui:TextBlock Text="Start with Windows"
+                            FontTypography="BodyStrong"/>
+              <ui:TextBlock Text="Automatically launch E2x2 Switch in the system tray on startup"
+                            FontTypography="Caption"
+                            TextWrapping="Wrap"
+                            Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+
+            <ui:ToggleSwitch Grid.Column="2"
+                             x:Name="StartWithWindowsToggle"
+                             Click="StartWithWindowsToggle_Click"/>
+          </Grid>
+        </ui:Card>
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- 3. Fixed Footer Status -->
+    <ui:TextBlock x:Name="StatusFooterText"
+                  Grid.Row="2"
+                  Text="● Connected (VID: 0x152A, PID: 0x8752)"
+                  FontTypography="Caption"
+                  Foreground="{DynamicResource SystemFillColorSuccessBrush}"
+                  Margin="24,6,24,14"/>
+  </Grid>
 </ui:FluentWindow>

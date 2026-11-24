@@ -7,67 +7,109 @@ namespace E2x2Switch.Services;
 /// <summary>Manages native Win32 global hotkey registrations.</summary>
 public class HotkeyService : IDisposable
 {
-    [DllImport("user32.dll")]
-    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+    #region Win32 Interop
 
     [DllImport("user32.dll")]
-    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+    private static extern bool RegisterHotKey(IntPtr windowHandle, int hotkeyId, uint modifiers, uint virtualKey);
 
+    [DllImport("user32.dll")]
+    private static extern bool UnregisterHotKey(IntPtr windowHandle, int hotkeyId);
+
+    #endregion
+
+    #region Constants & Fields
+
+    /// <summary>Alt modifier flag.</summary>
     public const uint ModAlt = 0x0001;
+
+    /// <summary>Control modifier flag.</summary>
     public const uint ModControl = 0x0002;
+
+    /// <summary>Shift modifier flag.</summary>
     public const uint ModShift = 0x0004;
+
+    /// <summary>Windows key modifier flag.</summary>
     public const uint ModWin = 0x0008;
+
+    /// <summary>Suppresses repeated WM_HOTKEY messages when holding down a shortcut.</summary>
     public const uint ModNoRepeat = 0x4000;
 
     private const int WmHotkey = 0x0312;
 
-    private IntPtr _hwnd;
-    private HwndSource? _source;
-    private int _currentId = 1;
+    private readonly List<int> _registeredIds = [];
+    private IntPtr _windowHandle;
+    private HwndSource? _hwndSource;
+    private int _nextHotkeyId = 1;
 
+    #endregion
+
+    #region Events
+
+    /// <summary>Raised when a registered global hotkey is pressed.</summary>
     public event Action<int>? HotkeyPressed;
 
-    /// <summary>Initializes message hook for the specified window handle.</summary>
-    public void Initialize(IntPtr hwnd)
+    #endregion
+
+    #region Public Methods
+
+    /// <summary>Initializes the Win32 message hook for the specified window handle.</summary>
+    /// <param name="windowHandle">Native HWND to receive hotkey messages.</param>
+    public void Initialize(IntPtr windowHandle)
     {
-        _hwnd = hwnd;
-        _source = HwndSource.FromHwnd(hwnd);
-        _source?.AddHook(HwndHook);
+        _windowHandle = windowHandle;
+        _hwndSource = HwndSource.FromHwnd(windowHandle);
+        _hwndSource?.AddHook(HwndHook);
     }
 
-    /// <summary>Registers a global hotkey with auto-repeat suppression and returns its unique ID.</summary>
+    /// <summary>Registers a global hotkey with auto-repeat suppression.</summary>
+    /// <param name="modifiers">Win32 modifier flags.</param>
+    /// <param name="key">Primary key to register.</param>
+    /// <returns>The assigned hotkey identifier, or <c>0</c> if registration failed.</returns>
     public int Register(uint modifiers, Key key)
     {
-        if (key == Key.None)
+        if (key == Key.None || _windowHandle == IntPtr.Zero)
             return 0;
 
-        int id = _currentId++;
-        uint vk = (uint)KeyInterop.VirtualKeyFromKey(key);
-        RegisterHotKey(_hwnd, id, modifiers | ModNoRepeat, vk);
-        return id;
+        int hotkeyId = _nextHotkeyId;
+        uint virtualKey = (uint)KeyInterop.VirtualKeyFromKey(key);
+        if (!RegisterHotKey(_windowHandle, hotkeyId, modifiers | ModNoRepeat, virtualKey))
+            return 0;
+
+        _nextHotkeyId++;
+        _registeredIds.Add(hotkeyId);
+        return hotkeyId;
     }
 
-    /// <summary>Unregisters all currently assigned hotkeys.</summary>
+    /// <summary>Unregisters all currently registered hotkeys.</summary>
     public void UnregisterAll()
     {
-        for (int i = 1; i < _currentId; i++)
-            UnregisterHotKey(_hwnd, i);
-        _currentId = 1;
+        foreach (int hotkeyId in _registeredIds)
+            UnregisterHotKey(_windowHandle, hotkeyId);
+        _registeredIds.Clear();
+        _nextHotkeyId = 1;
     }
 
-    private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    /// <summary>Unregisters all hotkeys and detaches the Win32 window hook.</summary>
+    public void Dispose()
     {
-        if (msg == WmHotkey)
+        UnregisterAll();
+        _hwndSource?.RemoveHook(HwndHook);
+        GC.SuppressFinalize(this);
+    }
+
+    #endregion
+
+    #region Private Methods
+
+    private IntPtr HwndHook(IntPtr windowHandle, int message, IntPtr wordParam, IntPtr longParam, ref bool handled)
+    {
+        if (message == WmHotkey)
         {
-            HotkeyPressed?.Invoke(wParam.ToInt32());
+            HotkeyPressed?.Invoke(wordParam.ToInt32());
             handled = true;
         }
         return IntPtr.Zero;
     }
 
-    public void Dispose()
-    {
-        UnregisterAll();
-        _source?.RemoveHook(HwndHook);
-    }
+    #endregion
 }

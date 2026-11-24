@@ -6,7 +6,7 @@ max_line_length = 210
 indent_style = space
 charset = utf-8
 
-[*.{js,css,cshtml,csproj}]
+[*.{xaml,csproj}]
 indent_size = 2
 
 [*.cs]

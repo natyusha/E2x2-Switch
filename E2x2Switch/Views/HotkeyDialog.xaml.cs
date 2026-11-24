@@ -13,8 +13,14 @@ namespace E2x2Switch.Views;
 /// <summary>Modal dialog for recording and changing shortcut key combinations.</summary>
 public partial class HotkeyDialog : FluentWindow
 {
+    #region Props & Constructor
+
+    /// <summary>Gets the resulting shortcut binding selected by the user.</summary>
     public HotkeyBinding ResultBinding { get; private set; }
 
+    /// <summary>Initializes the shortcut editor dialog for the specified action.</summary>
+    /// <param name="actionTitle">Display title describing the shortcut action.</param>
+    /// <param name="currentBinding">Existing shortcut binding to populate initially.</param>
     public HotkeyDialog(string actionTitle, HotkeyBinding currentBinding)
     {
         InitializeComponent();
@@ -24,50 +30,43 @@ public partial class HotkeyDialog : FluentWindow
         RenderBadges();
     }
 
-    protected override void OnPreviewKeyDown(WpfKeyEventArgs e)
+    #endregion
+
+    #region Key Capture
+
+    /// <summary>Captures modifier + key combinations or handles Esc/Enter dialog actions.</summary>
+    /// <param name="eventArgs">Keyboard event arguments.</param>
+    protected override void OnPreviewKeyDown(WpfKeyEventArgs eventArgs)
     {
-        Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+        Key pressedKey = eventArgs.Key == Key.System ? eventArgs.SystemKey : eventArgs.Key;
 
         // Allow standalone Esc to cancel and Enter to save when no modifiers are held
-        if (Keyboard.Modifiers == ModifierKeys.None)
+        if (Keyboard.Modifiers == ModifierKeys.None && pressedKey is Key.Escape or Key.Enter)
         {
-            if (key == Key.Escape)
-            {
-                DialogResult = false;
-                Close();
-                e.Handled = true;
-                return;
-            }
-            if (key == Key.Enter)
-            {
-                DialogResult = true;
-                Close();
-                e.Handled = true;
-                return;
-            }
-        }
-
-        // Ignore standalone modifier presses
-        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
-        {
+            CloseWithResult(pressedKey == Key.Enter);
+            eventArgs.Handled = true;
             return;
         }
 
-        uint mods = 0;
-        if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
-            mods |= HotkeyService.ModControl;
-        if (Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt))
-            mods |= HotkeyService.ModAlt;
-        if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
-            mods |= HotkeyService.ModShift;
-        if (Keyboard.IsKeyDown(Key.LWin) || Keyboard.IsKeyDown(Key.RWin))
-            mods |= HotkeyService.ModWin;
+        // Ignore standalone modifier presses
+        if (pressedKey is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
+            return;
 
-        if (mods != 0)
+        uint modifiers = 0;
+        if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+            modifiers |= HotkeyService.ModControl;
+        if (Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt))
+            modifiers |= HotkeyService.ModAlt;
+        if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+            modifiers |= HotkeyService.ModShift;
+        if (Keyboard.IsKeyDown(Key.LWin) || Keyboard.IsKeyDown(Key.RWin))
+            modifiers |= HotkeyService.ModWin;
+
+        if (modifiers != 0)
         {
-            ResultBinding = new HotkeyBinding(mods, key);
+            ResultBinding = new HotkeyBinding(modifiers, pressedKey);
             RenderBadges();
-            e.Handled = true;
+            eventArgs.Handled = true;
         }
     }
 
@@ -75,8 +74,7 @@ public partial class HotkeyDialog : FluentWindow
     {
         KeyBadgesPanel.Children.Clear();
 
-        foreach (var label in ResultBinding.GetKeyLabels())
-        {
+        foreach (string label in ResultBinding.GetKeyLabels())
             KeyBadgesPanel.Children.Add(
                 new Border
                 {
@@ -93,18 +91,21 @@ public partial class HotkeyDialog : FluentWindow
                     },
                 }
             );
-        }
     }
 
-    private void Save_Click(object sender, RoutedEventArgs e)
+    #endregion
+
+    #region Event Handlers
+
+    private void Save_Click(object sender, RoutedEventArgs eventArgs) => CloseWithResult(true);
+
+    private void Cancel_Click(object sender, RoutedEventArgs eventArgs) => CloseWithResult(false);
+
+    private void CloseWithResult(bool dialogResult)
     {
-        DialogResult = true;
+        DialogResult = dialogResult;
         Close();
     }
 
-    private void Cancel_Click(object sender, RoutedEventArgs e)
-    {
-        DialogResult = false;
-        Close();
-    }
+    #endregion
 }
